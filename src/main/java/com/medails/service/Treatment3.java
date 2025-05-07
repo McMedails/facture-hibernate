@@ -4,8 +4,10 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.swing.JOptionPane;
 
@@ -154,64 +156,44 @@ public class Treatment3
         // Mise à jour des graphiques avec la nouvelle échelle
         gn.slideRange(gr.chartDecadePan3, dp.sliDecadePan3); 
 
-        // Initialisation des données graphiques
+        // Réinitialise les datasets du graphique
         gr.dataDecadePan3.clear();
 
-        // Initialisation des données
-        double      graphTTC      = 0.0;
-        double      graphHT       = 0.0;
-        double      graphTVA      = 0.0;
-        String      lastYear      = null;
-        boolean     refreshYear   = false;
-
-        // Récupère les données de la DB
+        // Récupération de toutes les déductions
         List<Deduction> deductions = gn.getAllDeduction();
+
+        // Map pour cumuler TTC, TVA et HT par année
+        Map<String, double[]> cumulParAnnee = new HashMap<>();
 
         for (Deduction deduction : deductions)
         {
-            String   currentYear    = String.valueOf(deduction.getDeductionAnnee());
-            String   currentMonth   = (String) deduction.getDeductionMois();
-            double   currentTTC     = (double) deduction.getTTC();
-            double   currentHT      = (double) deduction.getHT();
-            double   currentTVA     = (double) deduction.getTVA();
+            String currentYear = String.valueOf(deduction.getDeductionAnnee());
+            double currentTTC  = deduction.getTTC();
+            double currentTVA  = deduction.getTVA();
+            double currentHT   = deduction.getHT();
 
-            // Vérification changement d'année
-            if (refreshYear == false)
-            {
-                lastYear = currentYear;
-                refreshYear = true;
-            }
+            // Si l'année n'existe pas encore dans la map, on initialise le tableau [TTC, TVA, HT]
+            cumulParAnnee.putIfAbsent(currentYear, new double[3]);
 
-            // Réinitialisation si changement d'année
-            if (!lastYear.equals(currentYear))
-            {
-                refreshYear   = false;
-                graphTTC      = 0.0;
-                graphHT       = 0.0;
-                graphTVA      = 0.0;         
-            }
-
-            // Cummule des résultats
-            graphTTC   +=  currentTTC;
-            graphHT    +=  currentHT;
-            graphTVA   +=  currentTVA;
-
-
-            /************************* GRAPHIQUE **************************/ 
-            // Trouve le mois correspondant et stocke la valeur dans le tableau
-            for (int ii = 0; ii < gr.GRAPHYEARS.length; ii++)
-            {
-                if (gr.GRAPHYEARS[ii].equals(currentYear))
-                {
-                    graphDecenal[ii][ii][0] = graphTTC;   
-                    graphDecenal[ii][ii][1] = graphTVA;        
-                    graphDecenal[ii][ii][2] = graphHT; 
-                }
-            }
-            
-            // Renvoie des données calculées vers le graphique
-            gr.updateDatasets(graphDecenal, gr.GRAPHYEARS, gr.SHORTCATEGORIES, gr.dataDecadePan3); 
+            double[] valeurs = cumulParAnnee.get(currentYear);
+            valeurs[0] += currentTTC;
+            valeurs[1] += currentTVA;
+            valeurs[2] += currentHT;
         }
+
+        // Injection dans le tableau graphDecenal
+        for (int ii = 0; ii < gr.GRAPHYEARS.length; ii++)
+        {
+            String annee = gr.GRAPHYEARS[ii];
+            double[] valeurs = cumulParAnnee.getOrDefault(annee, new double[] {0.0, 0.0, 0.0});
+
+            graphDecenal[ii][ii][0] = valeurs[0]; // TTC
+            graphDecenal[ii][ii][1] = valeurs[1]; // TVA
+            graphDecenal[ii][ii][2] = valeurs[2]; // HT
+        }
+
+        // Mise à jour du graphique avec les nouvelles données
+        gr.updateDatasets(graphDecenal, gr.GRAPHYEARS, gr.SHORTCATEGORIES, gr.dataDecadePan3); 
     }
 
     /*********************************************************** 
@@ -302,7 +284,10 @@ public class Treatment3
     public void saveDeductionDataListener()
     {
         // Vérification cellules non-vide
-        if (!validFields())
+        if (dp.dateDeduction.getDate() == null ||
+             dp.txtTTCPan3.getText().isEmpty() ||
+              dp.txtHTPan3.getText().isEmpty() ||
+               dp.txtTVAPan3.getText().isEmpty())
         {
             JOptionPane.showMessageDialog(dp.fen, "Tous les champs doivent être renseignés",
                                                     "Champs manquants", 
@@ -351,16 +336,16 @@ public class Treatment3
 
     private Deduction extractDeductionFromUI() 
     {
-        Date getPay = dp.datePay.getDate();
+        Date getDeduction = dp.dateDeduction.getDate();
         SimpleDateFormat sdfYear  = new SimpleDateFormat("yyyy", Locale.FRENCH);
         SimpleDateFormat sdfMonth = new SimpleDateFormat("MMMM", Locale.FRENCH);
         SimpleDateFormat sdfDay   = new SimpleDateFormat("dd"  , Locale.FRENCH);
 
         Deduction deduction = new Deduction();
 
-        /* A1 */ deduction.setDeductionAnnee       (Integer.parseInt       (sdfYear.format((getPay))));
-	    /* A1 */ deduction.setDeductionMois        (sdfMonth.format        (getPay));
-	    /* A1 */ deduction.setDeductionJour        (Integer.parseInt       (sdfDay.format(getPay)));
+        /* A1 */ deduction.setDeductionAnnee       (Integer.parseInt       (sdfYear.format((getDeduction))));
+	    /* A1 */ deduction.setDeductionMois        (sdfMonth.format        (getDeduction));
+	    /* A1 */ deduction.setDeductionJour        (Integer.parseInt       (sdfDay.format(getDeduction)));
 	    /* B1 */ deduction.setTTC                  (Double.parseDouble     (dp.txtTTCPan3.getText()));
 	    /* B2 */ deduction.setHT                   (Double.parseDouble     (dp.txtHTPan3.getText()));
 	    /* B3 */ deduction.setTVA                  (Double.parseDouble     (dp.txtTVAPan3.getText()));
@@ -370,16 +355,6 @@ public class Treatment3
         return deduction;
     }
 
-
-    // Vérification des champs complétés 
-    private boolean validFields()
-    {
-        return dp.dateDeduction.getDate() == null &&
-                 !dp.txtTTCPan3.getText().isEmpty() &&
-                  !dp.txtHTPan3.getText().isEmpty() &&
-                   !dp.txtTVAPan3.getText().isEmpty();
-    }    
-    
 
     // F3 -> RAZ
     private void clearListener()

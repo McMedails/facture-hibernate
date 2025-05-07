@@ -4,8 +4,10 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.swing.JOptionPane;
 
@@ -153,45 +155,27 @@ public class Treatment4
         // Initialisation des données graphiques
         gr.dataDecadePan4.clear();
 
-        // Initialisation des données
-        double      graphARE      = 0.0;
-        String      lastYear      = null;
-        boolean     refreshYear   = false;
-
         // Récupère les données de la DB
         List<Chomage> chomages = gn.getAllChomage();
+
+        // Map temporaire pour cumuler les ARE par année
+        Map<String, Double> cumulParAnnee = new HashMap<>();
 
         for (Chomage chomage : chomages)
         {
             String   currentYear    = String.valueOf(chomage.getChomageAnnee());
-            String   currentMonth   = (String) chomage.getChomageMois();
-            double   currentARE     = (double) chomage.getMontant();
+            double   currentARE     = chomage.getMontant();
 
-            // Vérification changement d'année
-            if (refreshYear == false)
-            {
-                lastYear = currentYear;
-                refreshYear = true;
-            }
-
-            // Réinitialisation si changement d'année
-            if (!lastYear.equals(currentYear))
-            {
-                refreshYear   = false;
-                graphARE      = 0.0;        
-            }
-
-            // Cummule des résultats
-            graphARE   +=  currentARE;
+            // Cumule les montants par année
+            cumulParAnnee.put(currentYear, cumulParAnnee.getOrDefault
+                              (currentYear, 0.0) + currentARE);
 
             /************************* GRAPHIQUE **************************/ 
             // Trouve le mois correspondant et stocke la valeur dans le tableau
             for (int ii = 0; ii < gr.LONGRAPHYEARS.length; ii++)
             {
-                if (gr.LONGRAPHYEARS[ii].equals(currentYear))
-                {
-                    graphDecenal[ii] = graphARE;   
-                }
+                String annee = gr.LONGRAPHYEARS[ii];
+                graphDecenal[ii] = cumulParAnnee.getOrDefault(annee, 0.0);
             }
             
             // Renvoie des données calculées vers le graphique
@@ -283,43 +267,47 @@ public class Treatment4
     public void saveChomageDataListener()
     {
         // Vérification cellules non-vide
-        if (!validFields())
+        if (dp.dateChomage.getDate() == null ||
+             dp.boxMonthsChomage.getSelectedItem() == null ||
+              dp.txtDayChomage.getText().isEmpty() ||
+               dp.txtQChomage.getText().isEmpty() ||
+                dp.txtAREChomage.getText().isEmpty())
         {
             JOptionPane.showMessageDialog(dp.fen, "Tous les champs doivent être renseignés",
                                                     "Champs manquants", 
                                                     JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+        
         try
         {
             Chomage chomage = extractChomageFromUI();
 
             // Vérification des doublons
-	        boolean exists = gn.getAllChomage().stream().anyMatch(f -> 
+            boolean exists = gn.getAllChomage().stream().anyMatch(f -> 
                                 f.getNameChomage().equals(chomage.getNameChomage())
-	        );
-	
-	        if (exists)
-	        {
-	            JOptionPane.showMessageDialog(dp.fen, "Une facture pour ce mois existe déjà",
-	                                                  "Doublon",
-	                                                  JOptionPane.WARNING_MESSAGE);
-	            return;
-	        }
+            );
+    
+            if (exists)
+            {
+                JOptionPane.showMessageDialog(dp.fen, "Une facture pour ce mois existe déjà",
+                                                    "Doublon",
+                                                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
             // Enregistrement
             gn.saveChomage(chomage);
-	        JOptionPane.showMessageDialog(dp.fen, "Facture enregistrée avec succès",
-	                                              "Enregistement réussi !",
-	                                              JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(dp.fen, "Facture enregistrée avec succès",
+                                                "Enregistement réussi !",
+                                                JOptionPane.INFORMATION_MESSAGE);
 
         }
         catch (NumberFormatException e)
         {
             JOptionPane.showMessageDialog(dp.fen, "Erreur de format numérique : " + e.getMessage(),
-                                                  "Erreur",
-                                                  JOptionPane.ERROR_MESSAGE);       	
+                                                "Erreur",
+                                                JOptionPane.ERROR_MESSAGE);       	
         }
         catch (Exception e)
         {
@@ -332,18 +320,18 @@ public class Treatment4
 
     private Chomage extractChomageFromUI() 
     {
-        Date getPay = dp.datePay.getDate();
+        Date getChomage = dp.dateChomage.getDate();
         SimpleDateFormat sdfYear  = new SimpleDateFormat("yyyy", Locale.FRENCH);
         SimpleDateFormat sdfMonth = new SimpleDateFormat("MMMM", Locale.FRENCH);
         SimpleDateFormat sdfDay   = new SimpleDateFormat("dd"  , Locale.FRENCH);
 
         Chomage chomage = new Chomage();
 
-        /* B1 */ chomage.setChomageAnnee         (Integer.parseInt       (sdfYear.format((getPay))));
-	    /* B1 */ chomage.setChomageMois          (sdfMonth.format        (getPay));
-	    /* B1 */ chomage.setChomageJour          (Integer.parseInt       (sdfDay.format(getPay)));
+        /* B1 */ chomage.setChomageAnnee         (Integer.parseInt       (sdfYear.format((getChomage))));
+	    /* B1 */ chomage.setChomageMois          (sdfMonth.format        (getChomage));
+	    /* B1 */ chomage.setChomageJour          (Integer.parseInt       (sdfDay.format(getChomage)));
         /* B2 */ chomage.setMoisActualisation    (                       (String) dp.boxMonthsChomage.getSelectedItem());
-	    /* C1 */ chomage.setJourParMois         (Integer.parseInt       (dp.txtDayChomage.getText()));
+	    /* C1 */ chomage.setJourParMois          (Integer.parseInt       (dp.txtDayChomage.getText()));
 	    /* C2 */ chomage.setCoefficient          (Double.parseDouble     (dp.txtQChomage.getText()));
 	    /* C3 */ chomage.setMontant              (Double.parseDouble     (dp.txtAREChomage.getText()));
         /* D1 */ chomage.setRepChomage           (                       (String) dp.boxRepChomage.getSelectedItem());
@@ -351,17 +339,6 @@ public class Treatment4
 
         return chomage;
     }
-
-
-    // Vérification des champs complétés 
-    private boolean validFields()
-    {
-        return dp.dateChomage.getDate() == null &&
-                dp.boxMonthsChomage.getSelectedItem() == null &&
-                 !dp.txtDayChomage.getText().isEmpty() &&
-                  !dp.txtQChomage.getText().isEmpty() &&
-                   !dp.txtAREChomage.getText().isEmpty();
-    }    
 
  
     // F3 -> RAZ

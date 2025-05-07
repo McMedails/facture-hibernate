@@ -216,7 +216,16 @@ public class Treatment1
     public void saveFactureDataListener()
     {
         // Vérification cellules non-vide
-        if (!validFields())
+        if (dp.boxYears.getSelectedItem() == null ||
+             dp.boxMonths.getSelectedItem() == null ||
+              dp.datePay.getDate() == null ||
+               dp.txtDays.getText().isEmpty() ||
+                dp.txtTJM.getText().isEmpty() ||
+                 dp.txtTTC.getText().isEmpty() ||
+                  dp.txtHT.getText().isEmpty() ||
+                   dp.txtTVA.getText().isEmpty() ||
+                    dp.txtTaxe.getText().isEmpty() ||
+                     dp.txtBenefit.getText().isEmpty())
         {
             JOptionPane.showMessageDialog(dp.fen, "Tous les champs doivent être renseignés",
                                                     "Champs manquants", 
@@ -294,23 +303,6 @@ public class Treatment1
     }
 
 
-    // Vérification des champs complétés 
-    private boolean validFields()
-    {
-        return dp.boxYears.getSelectedItem() != null &&
-                dp.boxMonths.getSelectedItem() != null &&
-                 dp.datePay.getDate() != null &&
-                  !dp.txtDays.getText().isEmpty() &&
-                   !dp.txtTJM.getText().isEmpty() &&
-                    !dp.txtTTC.getText().isEmpty() &&
-                     !dp.txtHT.getText().isEmpty() &&
-                      !dp.txtTVA.getText().isEmpty() &&
-                       !dp.txtTaxe.getText().isEmpty() &&
-                        !dp.txtBenefit.getText().isEmpty();
-    }
-
-
-    // K3 -> RAZ
     public void clearListener()
     {
         /* A1 */ dp.boxYears.setSelectedItem("");
