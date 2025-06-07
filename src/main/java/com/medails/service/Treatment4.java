@@ -24,9 +24,9 @@ import com.medails.service.Generic;
 public class Treatment4
 {
     /************* Déclarations Classes ****************/
-    private Display dp;
-    private Graphic gr;
-    private Generic gn;
+    private final Display dp;
+    private final Graphic gr;
+    private final Generic gn;
 
     /************************************************************ 
                             CONSTRUCTEUR

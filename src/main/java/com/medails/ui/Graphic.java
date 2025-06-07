@@ -21,7 +21,7 @@ import org.jfree.data.category.DefaultCategoryDataset;
 public class Graphic
 {
     /************* Déclarations Classes ****************/
-    private Display dp;
+    private final Display dp;
     
     /************************************************************ 
                             CONSTRUCTEUR

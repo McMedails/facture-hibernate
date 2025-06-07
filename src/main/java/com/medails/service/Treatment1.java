@@ -20,8 +20,8 @@ import com.medails.service.Generic;
 public class Treatment1
 {
     /************* Déclarations Classes ****************/
-    private Display dp;
-    private Generic gn;
+    private final Display dp;
+    private final Generic gn;
 
     /************************************************************ 
                             CONSTRUCTEUR

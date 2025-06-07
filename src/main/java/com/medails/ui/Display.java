@@ -194,7 +194,7 @@ public class Display
         tabDeduction = new JTabbedPane();
         tabChomage = new JTabbedPane();
 
-        // Ajout des onglets dans Fenetre
+        // Ajout des onglets dans fenetre
         fen.add(tabMain, BorderLayout.CENTER);
 
         // Placement des composants

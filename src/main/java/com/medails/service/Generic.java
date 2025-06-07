@@ -35,8 +35,8 @@ import com.medails.entity.Facture;
 public class Generic
 {
     /************* Déclarations Classes ****************/
-    private Display dp;
-    private Graphic gr;
+    private final Display dp;
+    private final Graphic gr;
 
     /************* Déclarations Interfaces *************/
     private final FactureRepository factureRepository;
